@@ -6,3 +6,5 @@ streamlit
 nba_api
 requests
 flask-cors
+xgboost
+scipy
