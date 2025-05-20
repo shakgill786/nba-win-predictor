@@ -1,6 +1,10 @@
+import os
 import streamlit as st
 import pandas as pd
 import requests
+
+# Get your deployed API URL (or fall back to localhost)
+API_URL = os.getenv("API_URL", "http://127.0.0.1:5000")
 
 # Page config
 st.set_page_config(page_title="NBA Win Predictor", layout="wide")
@@ -39,7 +43,8 @@ if st.sidebar.button("Predict Next Game"):
         "opp":       opp
     }
     with st.spinner("Calculating…"):
-        res = requests.post("https://<your-api-url>.onrender.com/predict", json=payload)
+        # Hit your deployed API
+        res = requests.post(f"{API_URL}/predict", json=payload)
         res.raise_for_status()
         prob = res.json()["win_probability"] * 100
         st.success(f"🏆 Win Probability: {prob:.1f}%")
