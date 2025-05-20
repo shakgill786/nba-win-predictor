@@ -5,8 +5,8 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# 1️⃣ Load your global model (re-name or point to model_global_nba.pkl)
-model = joblib.load("model_global_nba.pkl")
+model = joblib.load("model_xgb_tuned.pkl")
+
 
 @app.route("/", methods=["GET"])
 def home():
