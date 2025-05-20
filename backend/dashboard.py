@@ -7,7 +7,7 @@ st.set_page_config(page_title="NBA Win Predictor", layout="wide")
 st.title("🏀 NBA Next-Game Win Predictor")
 
 # --- LOAD FEATURES & TEAM LIST ---
-df = pd.read_csv("data/all_teams_features_2025.csv", parse_dates=["GAME_DATE"])
+df = pd.read_csv("backend/data/all_teams_features_2025.csv", parse_dates=["GAME_DATE"])
 teams = sorted(df["team"].unique())
 
 # --- SIDEBAR: SELECT TEAM & INPUTS ---
