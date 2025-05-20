@@ -1,0 +1,8 @@
+flask
+pandas
+scikit-learn
+joblib
+streamlit
+nba_api
+requests
+flask-cors
