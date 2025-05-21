@@ -1,20 +1,22 @@
-import os
 import streamlit as st
 import pandas as pd
-import requests
+import joblib
+import os
 
-# 1️⃣ Page config must be first
+# 1) Page config must be the very first Streamlit call
 st.set_page_config(page_title="NBA Win Predictor", layout="wide")
 
-# 2️⃣ Read API_URL from env (fallback to localhost) and show debug
-API_URL = os.getenv("API_URL", "http://127.0.0.1:5000")
-st.sidebar.markdown(f"**DEBUG**: API_URL = `{API_URL}`")
+# 2) Load your tuned model locally
+#    Adjust this path if you keep the pickle somewhere else:
+model_path = os.path.join(os.path.dirname(__file__), "../model_xgb_tuned.pkl")
+model = joblib.load(model_path)
 
-# 3️⃣ Title
+# 3) Title
 st.title("🏀 NBA Next-Game Win Predictor")
 
 # --- LOAD FEATURES & TEAM LIST ---
-df = pd.read_csv("backend/data/all_teams_features_2025.csv", parse_dates=["GAME_DATE"])
+csv_path = os.path.join(os.path.dirname(__file__), "data/all_teams_features_2025.csv")
+df = pd.read_csv(csv_path, parse_dates=["GAME_DATE"])
 teams = sorted(df["team"].unique())
 
 # --- SIDEBAR: SELECT TEAM & INPUTS ---
@@ -34,7 +36,7 @@ opp       = st.sidebar.selectbox("Next Opponent", sorted(df_t["opp"].unique()))
 
 # --- PREDICT BUTTON ---
 if st.sidebar.button("Predict Next Game"):
-    payload = {
+    X = pd.DataFrame([{
         "team":      team,
         "pts_5":     pts_5,
         "reb_5":     reb_5,
@@ -44,21 +46,20 @@ if st.sidebar.button("Predict Next Game"):
         "back2back": int(back2back),
         "home":      int(home),
         "opp":       opp
-    }
+    }])
+
     with st.spinner("Calculating…"):
-        res = requests.post(f"{API_URL}/predict", json=payload)
-        res.raise_for_status()
-        prob = res.json()["win_probability"] * 100
+        prob = model.predict_proba(X)[0, 1] * 100
         st.success(f"🏆 Win Probability: {prob:.1f}%")
 
 # --- MAIN CHART: RECENT PERFORMANCE ---
 st.header(f"{team} — Recent Performance (Last 20 Games)")
-chart_df = df_t.set_index("GAME_DATE")[["pts_5","win_pct_5"]].tail(20)
+chart_df = df_t.set_index("GAME_DATE")[["pts_5", "win_pct_5"]].tail(20)
 st.line_chart(chart_df)
 
 st.markdown(
     """
     *Data & model trained on the 2024-25 season for all teams.*  
-    Adjust the slider values or pull in fresh stats via the API.
+    Adjust the slider values to explore different scenarios.
     """
 )
