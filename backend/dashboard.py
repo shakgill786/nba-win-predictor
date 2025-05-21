@@ -3,12 +3,14 @@ import streamlit as st
 import pandas as pd
 import requests
 
-# Get your deployed API URL (or fall back to localhost)
+# 1️⃣ Page config must be first
+st.set_page_config(page_title="NBA Win Predictor", layout="wide")
+
+# 2️⃣ Read API_URL from env (fallback to localhost) and show debug
 API_URL = os.getenv("API_URL", "http://127.0.0.1:5000")
 st.sidebar.markdown(f"**DEBUG**: API_URL = `{API_URL}`")
 
-# Page config
-st.set_page_config(page_title="NBA Win Predictor", layout="wide")
+# 3️⃣ Title
 st.title("🏀 NBA Next-Game Win Predictor")
 
 # --- LOAD FEATURES & TEAM LIST ---
@@ -44,7 +46,6 @@ if st.sidebar.button("Predict Next Game"):
         "opp":       opp
     }
     with st.spinner("Calculating…"):
-        # Hit your deployed API
         res = requests.post(f"{API_URL}/predict", json=payload)
         res.raise_for_status()
         prob = res.json()["win_probability"] * 100
