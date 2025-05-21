@@ -5,6 +5,7 @@ import requests
 
 # Get your deployed API URL (or fall back to localhost)
 API_URL = os.getenv("API_URL", "http://127.0.0.1:5000")
+st.sidebar.markdown(f"**DEBUG**: API_URL = `{API_URL}`")
 
 # Page config
 st.set_page_config(page_title="NBA Win Predictor", layout="wide")
