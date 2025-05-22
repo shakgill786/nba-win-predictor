@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 # 📦 Load your tuned pipeline (change MODEL_PATH if you used a different name)
-MODEL_PATH = os.getenv("MODEL_PATH", "model_xgb_tuned.pkl")
+model = joblib.load("model_global_calibrated.pkl")
 model = joblib.load(MODEL_PATH)
 
 
