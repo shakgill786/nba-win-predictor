@@ -1,44 +1,60 @@
 # backend/data/prepare_all_teams.py
 
+import os
 import pandas as pd
 
-# 1) Load the merged logs
-df = pd.read_csv(
-    "data/all_teams_202425_gamelog.csv",
-    parse_dates=["GAME_DATE"]
-)
+# 1️⃣ Paths
+HERE    = os.path.dirname(__file__)               # …/backend/data
+IN_CSV  = os.path.join(HERE, "all_teams_202425_gamelog.csv")
+OUT_CSV = os.path.join(HERE, "all_teams_features_richer_2025.csv")
 
-# 2) Sort by team & date (so rolling windows are chronological)
-df = df.sort_values(["team", "GAME_DATE"])
+# 2️⃣ Load & sort
+df = pd.read_csv(IN_CSV, parse_dates=["GAME_DATE"])
+df.sort_values(["team", "GAME_DATE"], inplace=True)
 
-# 3) Binary win label
-df["W"] = (df["WL"] == "W").astype(int)
+# 3️⃣ Basic flags & possessions
+df["W"]    = (df["WL"] == "W").astype(int)
+df["home"] = df["MATCHUP"].str.contains(" vs\. ").astype(int)
+df["opp"]  = df["MATCHUP"].str.split().str[-1]
+df["poss"] = df["FGA"] + df["TOV"] + 0.4*df["FTA"] - df["OREB"]
 
-# 4) Rolling stats per team, via transform
-df["pts_5"]     = df.groupby("team")["PTS"].transform(lambda x: x.rolling(5).mean())
-df["reb_5"]     = df.groupby("team")["REB"].transform(lambda x: x.rolling(5).mean())
-df["ast_5"]     = df.groupby("team")["AST"].transform(lambda x: x.rolling(5).mean())
-df["win_pct_5"] = df.groupby("team")["W"].transform(lambda x: x.rolling(5).mean())
+# 4️⃣ Rolling per-team (last 5 games)
+grp = df.groupby("team", group_keys=False)
+for col, name in [
+    ("PTS","pts_5"),
+    ("REB","reb_5"),
+    ("AST","ast_5"),
+    ("W","win_pct_5"),
+    ("FG_PCT","fg_pct_5"),
+    ("FG3_PCT","fg3_pct_5"),
+    ("FT_PCT","ft_pct_5"),
+    ("poss","pace_5"),
+]:
+    df[name] = grp[col].rolling(5).mean().reset_index(level=0, drop=True)
 
-# 5) Rest days & back‐to‐back, via transform
-df["days_rest"] = df.groupby("team")["GAME_DATE"].transform(lambda x: x.diff().dt.days).fillna(0)
+# 5️⃣ Rest days & back-to-back
+df["days_rest"] = grp["GAME_DATE"].diff().dt.days.fillna(0).astype(int)
 df["back2back"] = (df["days_rest"] == 1).astype(int)
 
-# 6) Home/Away flag
-df["home"] = df["MATCHUP"].str.contains(" vs. ").astype(int)
+# 6️⃣ Drop the first 4 games of each team (NaNs)
+df = df.dropna(
+    subset=[
+        "pts_5","reb_5","ast_5","win_pct_5",
+        "fg_pct_5","fg3_pct_5","ft_pct_5","pace_5"
+    ]
+)
 
-# 7) Opponent abbreviation
-df["opp"] = df["MATCHUP"].str.split().str[-1]
+# 7️⃣ Opponent 5-game win% via a simple merge
+opp_df = df[["opp","GAME_DATE","win_pct_5"]].copy()
+opp_df.rename(columns={"win_pct_5":"opp_win_pct_5"}, inplace=True)
+df = df.merge(opp_df, on=["opp","GAME_DATE"], how="left")
 
-# 8) Drop rows where any rolling feature is NaN
-df = df.dropna(subset=["pts_5","reb_5","ast_5","win_pct_5","days_rest"])
-
-# 9) Select columns to keep
+# 8️⃣ Select final columns & save
 out = df[[
-    "team","GAME_DATE","pts_5","reb_5","ast_5","win_pct_5",
+    "team","GAME_DATE",
+    "pts_5","reb_5","ast_5","win_pct_5","opp_win_pct_5",
+    "fg_pct_5","fg3_pct_5","ft_pct_5","pace_5",
     "days_rest","back2back","home","opp","W"
 ]]
-
-# 10) Save to CSV
-out.to_csv("data/all_teams_features_2025.csv", index=False)
-print("✅ Saved data/all_teams_features_2025.csv")
+out.to_csv(OUT_CSV, index=False)
+print(f"✅ Wrote richer features to {OUT_CSV}")

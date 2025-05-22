@@ -8,3 +8,5 @@ requests
 flask-cors
 xgboost
 scipy
+lxml
+html5lib
